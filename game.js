@@ -1,0 +1,179 @@
+// game.js
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const playerSpeed = 3;
+const bulletSpeed = 8;
+const botSpeed = 2;
+const matchTime = 180; // seconds
+let keys = {};
+let bullets = [];
+let bots = [];
+let mapObjects = [];
+let timer = matchTime;
+let interval;
+
+const player = {
+  x: 100,
+  y: 100,
+  width: 30,
+  height: 30,
+  color: 'cyan',
+  dir: 0,
+  hp: 100,
+  type: 'Assault'
+};
+
+function initGame(selectedType) {
+  player.type = selectedType;
+  if (selectedType === 'Sniper') player.color = 'lime';
+  if (selectedType === 'Scout') player.color = 'yellow';
+
+  generateMap();
+  generateBots();
+  interval = setInterval(updateTimer, 1000);
+  requestAnimationFrame(gameLoop);
+}
+
+function generateMap() {
+  mapObjects = [
+    { x: 300, y: 300, width: 100, height: 200 },
+    { x: 600, y: 150, width: 150, height: 100 },
+    { x: 900, y: 400, width: 100, height: 300 }
+  ];
+}
+
+function generateBots() {
+  for (let i = 0; i < 3; i++) {
+    bots.push({
+      x: 1000 - i * 100,
+      y: 100 + i * 150,
+      width: 30,
+      height: 30,
+      color: 'red',
+      dir: Math.random() * Math.PI * 2,
+      hp: 100
+    });
+  }
+}
+
+function updateTimer() {
+  timer--;
+  if (timer <= 0) {
+    clearInterval(interval);
+    alert("Match Over!");
+    location.reload();
+  }
+}
+
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  updatePlayer();
+  updateBullets();
+  updateBots();
+  drawMap();
+  drawPlayer();
+  drawBots();
+  drawBullets();
+  drawUI();
+  requestAnimationFrame(gameLoop);
+}
+
+function updatePlayer() {
+  if (keys['w']) player.y -= playerSpeed;
+  if (keys['s']) player.y += playerSpeed;
+  if (keys['a']) player.x -= playerSpeed;
+  if (keys['d']) player.x += playerSpeed;
+}
+
+function updateBots() {
+  bots.forEach(bot => {
+    let dx = player.x - bot.x;
+    let dy = player.y - bot.y;
+    let angle = Math.atan2(dy, dx);
+    bot.x += Math.cos(angle) * botSpeed;
+    bot.y += Math.sin(angle) * botSpeed;
+
+    if (Math.hypot(dx, dy) < 300 && Math.random() < 0.05) {
+      bullets.push({
+        x: bot.x + bot.width / 2,
+        y: bot.y + bot.height / 2,
+        dx: Math.cos(angle) * bulletSpeed,
+        dy: Math.sin(angle) * bulletSpeed,
+        color: 'orange',
+        from: 'bot'
+      });
+    }
+  });
+}
+
+function updateBullets() {
+  bullets = bullets.filter(b => {
+    b.x += b.dx;
+    b.y += b.dy;
+    if (b.from === 'bot' && collide(b, player)) {
+      player.hp -= 10;
+      return false;
+    }
+    bots = bots.filter(bot => {
+      if (b.from === 'player' && collide(b, bot)) {
+        bot.hp -= 20;
+        return bot.hp > 0;
+      }
+      return true;
+    });
+    return b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height;
+  });
+}
+
+function collide(a, b) {
+  return a.x < b.x + b.width && a.x > b.x && a.y < b.y + b.height && a.y > b.y;
+}
+
+function drawMap() {
+  ctx.fillStyle = '#444';
+  mapObjects.forEach(obj => ctx.fillRect(obj.x, obj.y, obj.width, obj.height));
+}
+
+function drawPlayer() {
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+}
+
+function drawBots() {
+  bots.forEach(bot => {
+    ctx.fillStyle = bot.color;
+    ctx.fillRect(bot.x, bot.y, bot.width, bot.height);
+  });
+}
+
+function drawBullets() {
+  bullets.forEach(b => {
+    ctx.fillStyle = b.color;
+    ctx.fillRect(b.x, b.y, 5, 5);
+  });
+}
+
+function drawUI() {
+  ctx.fillStyle = 'white';
+  ctx.font = '20px monospace';
+  ctx.fillText(`HP: ${player.hp}`, 20, 30);
+  ctx.fillText(`Time: ${timer}s`, 20, 60);
+}
+
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+window.addEventListener('click', () => {
+  const angle = Math.atan2(
+    event.clientY - player.y,
+    event.clientX - player.x
+  );
+  bullets.push({
+    x: player.x + player.width / 2,
+    y: player.y + player.height / 2,
+    dx: Math.cos(angle) * bulletSpeed,
+    dy: Math.sin(angle) * bulletSpeed,
+    color: 'cyan',
+    from: 'player'
+  });
+});
