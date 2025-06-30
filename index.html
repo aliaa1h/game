@@ -2,39 +2,105 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FPS Online Game</title>
-  <link rel="stylesheet" href="style.css">
+  <title>3D FPS Demo</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      display: block;
+    }
+    #crosshair {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      margin-left: -5px;
+      margin-top: -5px;
+      background: white;
+      border-radius: 50%;
+      z-index: 10;
+    }
+  </style>
 </head>
 <body>
-  <div id="start-screen">
-    <h1>Choose Your Operator</h1>
-    <div id="characters">
-      <button onclick="selectCharacter('Assault')">Assault</button>
-      <button onclick="selectCharacter('Sniper')">Sniper</button>
-      <button onclick="selectCharacter('Scout')">Scout</button>
-    </div>
-    <button onclick="startGame()">Start Match</button>
-  </div>
-
-  <canvas id="gameCanvas" width="1280" height="720"></canvas>
+  <div id="crosshair"></div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/examples/js/controls/PointerLockControls.js"></script>
   <script>
-    let selectedCharacter = null;
-    function selectCharacter(type) {
-      selectedCharacter = type;
-      document.querySelectorAll('#characters button').forEach(btn => btn.style.border = '2px solid white');
-      event.target.style.border = '2px solid lime';
+    let camera, scene, renderer, controls;
+    let bullets = [];
+    let clock = new THREE.Clock();
+
+    init();
+    animate();
+
+    function init() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x202020);
+
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(1, 1, 1);
+      scene.add(light);
+
+      const ambient = new THREE.AmbientLight(0x404040);
+      scene.add(ambient);
+
+      const floorGeo = new THREE.PlaneGeometry(200, 200);
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+      const floor = new THREE.Mesh(floorGeo, floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      scene.add(floor);
+
+      for (let i = 0; i < 5; i++) {
+        const box = new THREE.Mesh(
+          new THREE.BoxGeometry(10, 10, 10),
+          new THREE.MeshStandardMaterial({ color: 0x444444 })
+        );
+        box.position.set(Math.random() * 100 - 50, 5, Math.random() * 100 - 50);
+        scene.add(box);
+      }
+
+      controls = new THREE.PointerLockControls(camera, document.body);
+      document.body.addEventListener('click', () => controls.lock());
+
+      const onKeyDown = e => {
+        if (e.code === 'Space') shoot();
+      }
+      document.addEventListener('keydown', onKeyDown);
+
+      renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
     }
 
-    function startGame() {
-      if (!selectedCharacter) {
-        alert('Please select a character.');
-        return;
-      }
-      document.getElementById('start-screen').style.display = 'none';
-      initGame(selectedCharacter);
+    function shoot() {
+      const bullet = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff0000 })
+      );
+      bullet.position.copy(camera.position);
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      bullet.userData.velocity = dir.multiplyScalar(2);
+      scene.add(bullet);
+      bullets.push(bullet);
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      bullets.forEach(b => {
+        b.position.add(b.userData.velocity);
+      });
+      renderer.render(scene, camera);
     }
   </script>
-  <script src="game.js"></script>
 </body>
 </html>
