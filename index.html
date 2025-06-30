@@ -9,11 +9,32 @@
 <body>
   <div id="start-screen">
     <h1>Choose Your Operator</h1>
-    <div id="characters"></div>
+    <div id="characters">
+      <button onclick="selectCharacter('Assault')">Assault</button>
+      <button onclick="selectCharacter('Sniper')">Sniper</button>
+      <button onclick="selectCharacter('Scout')">Scout</button>
+    </div>
     <button onclick="startGame()">Start Match</button>
   </div>
 
   <canvas id="gameCanvas" width="1280" height="720"></canvas>
+  <script>
+    let selectedCharacter = null;
+    function selectCharacter(type) {
+      selectedCharacter = type;
+      document.querySelectorAll('#characters button').forEach(btn => btn.style.border = '2px solid white');
+      event.target.style.border = '2px solid lime';
+    }
+
+    function startGame() {
+      if (!selectedCharacter) {
+        alert('Please select a character.');
+        return;
+      }
+      document.getElementById('start-screen').style.display = 'none';
+      initGame(selectedCharacter);
+    }
+  </script>
   <script src="game.js"></script>
 </body>
 </html>
